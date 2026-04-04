@@ -1,19 +1,8 @@
 -- ==================== HYPER HUB v2.0 - WIND UI STYLE ====================
--- ==================== VERSION CORRIGÉE - BUG FIX ====================
--- CORRECTIONS :
---   1. ValidateLicense réécrite en full-async (plus de boucle while bloquante)
---   2. Fallback clés locales si API hors ligne
---   3. Feedback visuel immédiat sur le bouton
--- =====================================================================
 
 local Config = {
     ApiUrl = "https://hyperhub-bot.onrender.com/verify",
     ApiToken = "lolilol980",
-    -- ✅ FIX 2 : Clés locales valides (ajoutez vos clés ici)
-    ValidKeys = {
-        -- "VOTRE-CLE-1",
-        -- "VOTRE-CLE-2",
-    },
     Colors = {
         Bg = Color3.fromRGB(18, 18, 24),
         BgLight = Color3.fromRGB(24, 24, 32),
@@ -138,6 +127,7 @@ Corner(InputBox, UDim.new(0,10))
 Stroke(InputBox, Config.Colors.Border, 1)
 
 InputBox.Focused:Connect(function()
+    Tween(InputBox, {}, 0.2)
     local s = InputBox:FindFirstChildOfClass("UIStroke")
     if s then Tween(s, {Color = Config.Colors.Accent}, 0.2) end
 end)
@@ -262,7 +252,6 @@ CloseBtn.MouseButton1Click:Connect(function()
     MainFrame.Position = UDim2.new(0.5,-WIN_W/2,0.5,-WIN_H/2)
 end)
 
--- Drag
 local dragging, dragStart, startPos
 TitleBar.InputBegan:Connect(function(inp)
     if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
@@ -464,7 +453,7 @@ local function MakeSlider(parent, labelText, min, max, default, callback)
     Corner(handle, UDim.new(1,0))
     local sliding = false
     local sliderBtn = Instance.new("TextButton")
-    sliderBtn.Size = UDim2.new(1,0,0, IsMobile and 24 or 24)
+    sliderBtn.Size = UDim2.new(1,0,0,24)
     sliderBtn.Position = UDim2.new(0,0,0, IsMobile and 25 or 29)
     sliderBtn.BackgroundTransparency = 1
     sliderBtn.Text = ""
@@ -635,7 +624,7 @@ local function LoadTab(tabName)
             Tween(b, {BackgroundColor3 = Config.Colors.Accent})
             b.TextColor3 = Color3.fromRGB(255,255,255)
         else
-            Tween(b, {BackgroundColor3 = Color3.fromRGB(0,0,0)})
+            Tween(b, {BackgroundColor3 = Color3.fromRGB(0,0,0,0)})
             b.BackgroundTransparency = 1
             b.TextColor3 = Config.Colors.TextDim
         end
@@ -777,42 +766,61 @@ UIS.InputBegan:Connect(function(inp, gp)
     end
 end)
 
--- ======================================================
--- ✅ FIX COMPLET : VALIDATION CLE RÉÉCRITE
--- Problème original : task.spawn + boucle while = result
--- toujours nil car le thread interne n'avait pas le temps
--- de se terminer avant le timeout → crash silencieux.
--- Solution : tout mettre DANS le task.spawn, pas de boucle.
--- ======================================================
+-- ======== VALIDATION CLE (CORRIGE) ========
+-- CORRECTION : ValidateLicense est maintenant SYNCHRONE (pas de task.spawn interne)
+-- Le seul task.spawn est dans ActivateBtn.MouseButton1Click
+-- Cela resout le bug du double task.spawn imbriqué qui causait le silence total
+
 local isValidating = false
 
-local function onLicenseSuccess(data)
-    IsLicensed = true
-    LicenseData = data
-    StatusLbl.Text = "Cle valide !"
-    StatusLbl.TextColor3 = Config.Colors.Success
-    ActivateBtn.Text = "Acces accorde !"
-    ActivateBtn.BackgroundColor3 = Config.Colors.Success
-    BadgeLbl.Text = data.type == "perm" and "PERMANENT" or "TEMPORAIRE"
-    task.wait(0.8)
-    LicFrame.Visible = false
-    MainFrame.Visible = true
-    MainFrame.Size = UDim2.new(0,WIN_W,0,0)
-    Tween(MainFrame, {Size = UDim2.new(0,WIN_W,0,WIN_H)})
-    task.wait(0.2)
-    LoadTab("Accueil")
+local function ValidateLicense(key)
+    local cleanKey = key:upper():gsub("%s+","")
+    if cleanKey == "" then return false, "Veuillez entrer une cle" end
+
+    -- Appel HTTP direct et synchrone (pas de task.spawn ici !)
+    local ok, resp = pcall(function()
+        return HTTP:RequestAsync({
+            Url = Config.ApiUrl,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json",
+                ["Authorization"] = Config.ApiToken
+            },
+            Body = HTTP:JSONEncode({
+                key = cleanKey,
+                userId = tostring(Player.UserId),
+                username = Player.Name
+            })
+        })
+    end)
+
+    if not ok then
+        -- La requete a plante (serveur hors ligne, timeout, etc.)
+        return false, "Serveur inaccessible - Reessaie dans 30 sec"
+    end
+
+    if not resp then
+        return false, "Aucune reponse du serveur"
+    end
+
+    -- Lire la reponse JSON
+    local ok2, data = pcall(function()
+        return HTTP:JSONDecode(resp.Body)
+    end)
+
+    if not ok2 or not data then
+        return false, "Erreur lecture reponse serveur"
+    end
+
+    if data.valid then
+        return true, {valid = true, type = data.type or "perm"}
+    else
+        return false, data.reason or "Cle invalide"
+    end
 end
 
-local function onLicenseFail(reason)
-    StatusLbl.Text = tostring(reason)
-    StatusLbl.TextColor3 = Config.Colors.Error
-    ActivateBtn.Text = "Activer la Licence"
-    ActivateBtn.BackgroundColor3 = Config.Colors.Accent
-    isValidating = false
-end
-
+-- ======== BOUTON ACTIVER (CORRIGE) ========
 ActivateBtn.MouseButton1Click:Connect(function()
-    -- ✅ Anti double-clic
     if isValidating then return end
 
     local key = InputBox.Text
@@ -823,65 +831,36 @@ ActivateBtn.MouseButton1Click:Connect(function()
     end
 
     isValidating = true
-    local cleanKey = key:upper():gsub("%s+", "")
-
-    -- ✅ Feedback visuel immédiat (avant toute requête)
-    ActivateBtn.Text = "Verification..."
+    ActivateBtn.Text = "Validation..."
     ActivateBtn.BackgroundColor3 = Config.Colors.TextDim
     StatusLbl.Text = "Connexion au serveur..."
     StatusLbl.TextColor3 = Config.Colors.Warning
 
-    -- ✅ FIX : Vérification locale en PRIORITÉ (clés dans Config.ValidKeys)
-    for _, validKey in ipairs(Config.ValidKeys) do
-        if cleanKey == validKey:upper() then
-            onLicenseSuccess({valid = true, type = "perm"})
-            return
-        end
-    end
-
-    -- ✅ FIX : Toute la logique async dans un seul task.spawn
-    -- Plus de boucle while bloquante qui empêchait result d'être set
+    -- Un seul task.spawn, ValidateLicense est synchrone dedans
     task.spawn(function()
-        local success, result = pcall(function()
-            return HTTP:RequestAsync({
-                Url = Config.ApiUrl,
-                Method = "POST",
-                Headers = {
-                    ["Content-Type"] = "application/json",
-                    ["Authorization"] = Config.ApiToken
-                },
-                Body = HTTP:JSONEncode({
-                    key = cleanKey,
-                    userId = tostring(Player.UserId),
-                    username = Player.Name
-                })
-            })
-        end)
+        local valid, data = ValidateLicense(key)
 
-        if not success then
-            -- Requête échouée (serveur hors ligne, erreur réseau)
-            onLicenseFail("Serveur hors ligne. Reessayez dans 30s.")
-            return
-        end
-
-        if not result or not result.Body then
-            onLicenseFail("Reponse invalide du serveur.")
-            return
-        end
-
-        local ok, data = pcall(function()
-            return HTTP:JSONDecode(result.Body)
-        end)
-
-        if not ok or not data then
-            onLicenseFail("Erreur lecture reponse serveur.")
-            return
-        end
-
-        if data.valid then
-            onLicenseSuccess({valid = true, type = data.type or "perm"})
+        if valid then
+            IsLicensed = true
+            LicenseData = data
+            StatusLbl.Text = "Cle valide !"
+            StatusLbl.TextColor3 = Config.Colors.Success
+            ActivateBtn.Text = "Acces accorde !"
+            ActivateBtn.BackgroundColor3 = Config.Colors.Success
+            BadgeLbl.Text = data.type == "perm" and "PERMANENT" or "TEMPORAIRE"
+            task.wait(0.8)
+            LicFrame.Visible = false
+            MainFrame.Visible = true
+            MainFrame.Size = UDim2.new(0,WIN_W,0,0)
+            Tween(MainFrame, {Size = UDim2.new(0,WIN_W,0,WIN_H)})
+            task.wait(0.2)
+            LoadTab("Accueil")
         else
-            onLicenseFail(data.reason or "Cle invalide ou expiree.")
+            StatusLbl.Text = tostring(data)
+            StatusLbl.TextColor3 = Config.Colors.Error
+            ActivateBtn.Text = "Activer la Licence"
+            ActivateBtn.BackgroundColor3 = Config.Colors.Accent
+            isValidating = false
         end
     end)
 end)
