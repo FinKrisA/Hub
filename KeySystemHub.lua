@@ -1,8 +1,19 @@
 -- ==================== HYPER HUB v2.0 - WIND UI STYLE ====================
+-- ==================== VERSION CORRIGÉE - BUG FIX ====================
+-- CORRECTIONS :
+--   1. ValidateLicense réécrite en full-async (plus de boucle while bloquante)
+--   2. Fallback clés locales si API hors ligne
+--   3. Feedback visuel immédiat sur le bouton
+-- =====================================================================
 
 local Config = {
     ApiUrl = "https://hyperhub-bot.onrender.com/verify",
     ApiToken = "lolilol980",
+    -- ✅ FIX 2 : Clés locales valides (ajoutez vos clés ici)
+    ValidKeys = {
+        -- "VOTRE-CLE-1",
+        -- "VOTRE-CLE-2",
+    },
     Colors = {
         Bg = Color3.fromRGB(18, 18, 24),
         BgLight = Color3.fromRGB(24, 24, 32),
@@ -31,7 +42,6 @@ local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 local IsMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
 
--- Taille adaptee mobile/PC
 local WIN_W = IsMobile and 360 or 580
 local WIN_H = IsMobile and 500 or 420
 local SIDE_W = IsMobile and 110 or 150
@@ -94,7 +104,6 @@ LicFrame.Parent = ScreenGui
 Corner(LicFrame, UDim.new(0,16))
 Stroke(LicFrame, Config.Colors.Accent, 2)
 
--- Ligne decorative top
 local AccentLine = Instance.new("Frame")
 AccentLine.Size = UDim2.new(0.6, 0, 0, 3)
 AccentLine.Position = UDim2.new(0.2, 0, 0, 0)
@@ -129,7 +138,6 @@ Corner(InputBox, UDim.new(0,10))
 Stroke(InputBox, Config.Colors.Border, 1)
 
 InputBox.Focused:Connect(function()
-    Tween(InputBox, {}, 0.2)
     local s = InputBox:FindFirstChildOfClass("UIStroke")
     if s then Tween(s, {Color = Config.Colors.Accent}, 0.2) end
 end)
@@ -181,7 +189,6 @@ MainFrame.Parent = ScreenGui
 Corner(MainFrame, UDim.new(0,14))
 Stroke(MainFrame, Config.Colors.Border, 1)
 
--- Shadow
 local Shadow = Instance.new("ImageLabel")
 Shadow.Size = UDim2.new(1, 40, 1, 40)
 Shadow.Position = UDim2.new(0,-20,0,-20)
@@ -207,7 +214,6 @@ TitleFix.BackgroundColor3 = Config.Colors.Sidebar
 TitleFix.BorderSizePixel = 0
 TitleFix.Parent = TitleBar
 
--- Dot decoratif
 local Dot = Instance.new("Frame")
 Dot.Size = UDim2.new(0,8,0,8)
 Dot.Position = UDim2.new(0,14,0.5,-4)
@@ -219,11 +225,9 @@ Corner(Dot, UDim.new(1,0))
 Label(TitleBar, "Hyper Hub", IsMobile and 13 or 15, Config.Colors.Text, Enum.Font.GothamBold,
     UDim2.new(0,28,0,0), UDim2.new(0,120,1,0), Enum.TextXAlignment.Left)
 
--- Badge licence
 local Badge = Instance.new("Frame")
 Badge.Size = UDim2.new(0, IsMobile and 80 or 95, 0, IsMobile and 20 or 24)
 Badge.Position = UDim2.new(0, IsMobile and 140 or 160, 0.5, IsMobile and -10 or -12)
-Badge.BackgroundColor3 = Color3.fromRGB(34,197,94, 0.2)
 Badge.BackgroundColor3 = Color3.fromRGB(20,50,30)
 Badge.BorderSizePixel = 0
 Badge.Parent = TitleBar
@@ -238,7 +242,6 @@ BadgeLbl.Font = Enum.Font.GothamBold
 BadgeLbl.TextSize = IsMobile and 9 or 10
 BadgeLbl.Parent = Badge
 
--- Bouton fermer
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Size = UDim2.new(0, IsMobile and 28 or 32, 0, IsMobile and 28 or 32)
 CloseBtn.Position = UDim2.new(1, IsMobile and -38 or -44, 0.5, IsMobile and -14 or -16)
@@ -250,6 +253,7 @@ CloseBtn.TextSize = IsMobile and 12 or 14
 CloseBtn.BorderSizePixel = 0
 CloseBtn.Parent = TitleBar
 Corner(CloseBtn, UDim.new(0,8))
+
 CloseBtn.MouseButton1Click:Connect(function()
     Tween(MainFrame, {Size = UDim2.new(0,WIN_W,0,0), Position = UDim2.new(0.5,-WIN_W/2,0.5,0)})
     task.wait(0.2)
@@ -306,7 +310,6 @@ SidePad.PaddingRight = UDim.new(0,8)
 SidePad.PaddingBottom = UDim.new(0,10)
 SidePad.Parent = SidebarFrame
 
--- Separateur sidebar/content
 local Separator = Instance.new("Frame")
 Separator.Size = UDim2.new(0,1,1,-(IsMobile and 42 or 46))
 Separator.Position = UDim2.new(0,SIDE_W,0,IsMobile and 42 or 46)
@@ -337,7 +340,6 @@ ContentLayout.Padding = UDim.new(0,10)
 ContentLayout.Parent = ContentFrame
 
 -- ======== COMPOSANTS UI ========
-
 local function MakeCard(title)
     local card = Instance.new("Frame")
     card.Size = UDim2.new(1,0,0,0)
@@ -347,16 +349,13 @@ local function MakeCard(title)
     card.Parent = ContentFrame
     Corner(card, UDim.new(0,10))
     Stroke(card, Config.Colors.Border, 1)
-
     local cardPad = Instance.new("UIPadding")
     cardPad.PaddingAll = UDim.new(0,12)
     cardPad.Parent = card
-
     local cardLayout = Instance.new("UIListLayout")
     cardLayout.FillDirection = Enum.FillDirection.Vertical
     cardLayout.Padding = UDim.new(0,8)
     cardLayout.Parent = card
-
     if title then
         local titleLbl = Instance.new("TextLabel")
         titleLbl.Size = UDim2.new(1,0,0,18)
@@ -368,7 +367,6 @@ local function MakeCard(title)
         titleLbl.TextXAlignment = Enum.TextXAlignment.Left
         titleLbl.Parent = card
     end
-
     return card
 end
 
@@ -377,7 +375,6 @@ local function MakeToggle(parent, labelText, default, callback)
     row.Size = UDim2.new(1,0,0, IsMobile and 36 or 38)
     row.BackgroundTransparency = 1
     row.Parent = parent
-
     local lbl = Instance.new("TextLabel")
     lbl.Size = UDim2.new(1,-60,1,0)
     lbl.BackgroundTransparency = 1
@@ -387,9 +384,7 @@ local function MakeToggle(parent, labelText, default, callback)
     lbl.TextSize = IsMobile and 12 or 13
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = row
-
     local state = default or false
-
     local track = Instance.new("Frame")
     track.Size = UDim2.new(0, IsMobile and 42 or 46, 0, IsMobile and 22 or 24)
     track.Position = UDim2.new(1, IsMobile and -46 or -50, 0.5, IsMobile and -11 or -12)
@@ -397,28 +392,24 @@ local function MakeToggle(parent, labelText, default, callback)
     track.BorderSizePixel = 0
     track.Parent = row
     Corner(track, UDim.new(1,0))
-
     local knob = Instance.new("Frame")
     knob.Size = UDim2.new(0, IsMobile and 16 or 18, 0, IsMobile and 16 or 18)
-    knob.Position = state and UDim2.new(1, IsMobile and -19 or -21, 0.5, IsMobile and -8 or -9) or UDim2.new(0, IsMobile and 3 or 3, 0.5, IsMobile and -8 or -9)
+    knob.Position = state and UDim2.new(1, IsMobile and -19 or -21, 0.5, IsMobile and -8 or -9) or UDim2.new(0, 3, 0.5, IsMobile and -8 or -9)
     knob.BackgroundColor3 = Color3.fromRGB(255,255,255)
     knob.BorderSizePixel = 0
     knob.Parent = track
     Corner(knob, UDim.new(1,0))
-
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1,0,1,0)
     btn.BackgroundTransparency = 1
     btn.Text = ""
     btn.Parent = row
-
     btn.MouseButton1Click:Connect(function()
         state = not state
         Tween(track, {BackgroundColor3 = state and Config.Colors.Accent or Config.Colors.Toggle})
         Tween(knob, {Position = state and UDim2.new(1, IsMobile and -19 or -21, 0.5, IsMobile and -8 or -9) or UDim2.new(0, 3, 0.5, IsMobile and -8 or -9)})
         if callback then callback(state) end
     end)
-
     return row
 end
 
@@ -427,12 +418,10 @@ local function MakeSlider(parent, labelText, min, max, default, callback)
     row.Size = UDim2.new(1,0,0, IsMobile and 52 or 56)
     row.BackgroundTransparency = 1
     row.Parent = parent
-
     local topRow = Instance.new("Frame")
     topRow.Size = UDim2.new(1,0,0,20)
     topRow.BackgroundTransparency = 1
     topRow.Parent = row
-
     local lbl = Instance.new("TextLabel")
     lbl.Size = UDim2.new(0.7,0,1,0)
     lbl.BackgroundTransparency = 1
@@ -442,7 +431,6 @@ local function MakeSlider(parent, labelText, min, max, default, callback)
     lbl.TextSize = IsMobile and 12 or 13
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = topRow
-
     local valLbl = Instance.new("TextLabel")
     valLbl.Size = UDim2.new(0.3,0,1,0)
     valLbl.Position = UDim2.new(0.7,0,0,0)
@@ -453,15 +441,13 @@ local function MakeSlider(parent, labelText, min, max, default, callback)
     valLbl.TextSize = IsMobile and 12 or 13
     valLbl.TextXAlignment = Enum.TextXAlignment.Right
     valLbl.Parent = topRow
-
     local track = Instance.new("Frame")
-    track.Size = UDim2.new(1,0,0, IsMobile and 6 or 6)
+    track.Size = UDim2.new(1,0,0,6)
     track.Position = UDim2.new(0,0,0, IsMobile and 32 or 36)
     track.BackgroundColor3 = Config.Colors.Toggle
     track.BorderSizePixel = 0
     track.Parent = row
     Corner(track, UDim.new(1,0))
-
     local fill = Instance.new("Frame")
     local pct = ((default or min) - min) / (max - min)
     fill.Size = UDim2.new(pct, 0, 1, 0)
@@ -469,15 +455,13 @@ local function MakeSlider(parent, labelText, min, max, default, callback)
     fill.BorderSizePixel = 0
     fill.Parent = track
     Corner(fill, UDim.new(1,0))
-
     local handle = Instance.new("Frame")
-    handle.Size = UDim2.new(0, IsMobile and 14 or 14, 0, IsMobile and 14 or 14)
-    handle.Position = UDim2.new(pct, IsMobile and -7 or -7, 0.5, IsMobile and -7 or -7)
+    handle.Size = UDim2.new(0,14,0,14)
+    handle.Position = UDim2.new(pct,-7,0.5,-7)
     handle.BackgroundColor3 = Color3.fromRGB(255,255,255)
     handle.BorderSizePixel = 0
     handle.Parent = track
     Corner(handle, UDim.new(1,0))
-
     local sliding = false
     local sliderBtn = Instance.new("TextButton")
     sliderBtn.Size = UDim2.new(1,0,0, IsMobile and 24 or 24)
@@ -485,7 +469,6 @@ local function MakeSlider(parent, labelText, min, max, default, callback)
     sliderBtn.BackgroundTransparency = 1
     sliderBtn.Text = ""
     sliderBtn.Parent = row
-
     local function updateSlider(x)
         local abs = track.AbsolutePosition.X
         local w = track.AbsoluteSize.X
@@ -496,7 +479,6 @@ local function MakeSlider(parent, labelText, min, max, default, callback)
         valLbl.Text = tostring(val)
         if callback then callback(val) end
     end
-
     sliderBtn.InputBegan:Connect(function(inp)
         if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
             sliding = true
@@ -513,7 +495,6 @@ local function MakeSlider(parent, labelText, min, max, default, callback)
             sliding = false
         end
     end)
-
     return row
 end
 
@@ -523,7 +504,6 @@ local function MakeDropdown(parent, labelText, options, callback)
     container.AutomaticSize = Enum.AutomaticSize.Y
     container.BackgroundTransparency = 1
     container.Parent = parent
-
     local header = Instance.new("TextButton")
     header.Size = UDim2.new(1,0,0, IsMobile and 38 or 40)
     header.BackgroundColor3 = Config.Colors.Toggle
@@ -532,7 +512,6 @@ local function MakeDropdown(parent, labelText, options, callback)
     header.Parent = container
     Corner(header, UDim.new(0,8))
     Stroke(header, Config.Colors.Border, 1)
-
     local headerLbl = Instance.new("TextLabel")
     headerLbl.Size = UDim2.new(1,-40,1,0)
     headerLbl.Position = UDim2.new(0,12,0,0)
@@ -543,7 +522,6 @@ local function MakeDropdown(parent, labelText, options, callback)
     headerLbl.TextSize = IsMobile and 12 or 13
     headerLbl.TextXAlignment = Enum.TextXAlignment.Left
     headerLbl.Parent = header
-
     local arrow = Instance.new("TextLabel")
     arrow.Size = UDim2.new(0,30,1,0)
     arrow.Position = UDim2.new(1,-34,0,0)
@@ -553,7 +531,6 @@ local function MakeDropdown(parent, labelText, options, callback)
     arrow.Font = Enum.Font.GothamBold
     arrow.TextSize = 12
     arrow.Parent = header
-
     local dropdown = Instance.new("Frame")
     dropdown.Size = UDim2.new(1,0,0,0)
     dropdown.BackgroundColor3 = Config.Colors.BgCard
@@ -562,11 +539,9 @@ local function MakeDropdown(parent, labelText, options, callback)
     dropdown.Parent = container
     Corner(dropdown, UDim.new(0,8))
     Stroke(dropdown, Config.Colors.Accent, 1)
-
     local ddLayout = Instance.new("UIListLayout")
     ddLayout.FillDirection = Enum.FillDirection.Vertical
     ddLayout.Parent = dropdown
-
     for _, opt in ipairs(options) do
         local optBtn = Instance.new("TextButton")
         optBtn.Size = UDim2.new(1,0,0, IsMobile and 34 or 36)
@@ -577,11 +552,9 @@ local function MakeDropdown(parent, labelText, options, callback)
         optBtn.TextSize = IsMobile and 12 or 13
         optBtn.TextXAlignment = Enum.TextXAlignment.Left
         optBtn.Parent = dropdown
-
         local optPad = Instance.new("UIPadding")
         optPad.PaddingLeft = UDim.new(0,12)
         optPad.Parent = optBtn
-
         optBtn.MouseEnter:Connect(function()
             Tween(optBtn, {BackgroundTransparency = 0.7})
             optBtn.BackgroundColor3 = Config.Colors.Accent
@@ -596,10 +569,8 @@ local function MakeDropdown(parent, labelText, options, callback)
             if callback then callback(opt) end
         end)
     end
-
     local isOpen = false
     local totalH = #options * (IsMobile and 34 or 36)
-
     header.MouseButton1Click:Connect(function()
         isOpen = not isOpen
         if isOpen then
@@ -610,7 +581,6 @@ local function MakeDropdown(parent, labelText, options, callback)
             arrow.Text = "v"
         end
     end)
-
     return container
 end
 
@@ -625,7 +595,6 @@ local function MakeButton(parent, text, col, callback)
     btn.BorderSizePixel = 0
     btn.Parent = parent
     Corner(btn, UDim.new(0,8))
-
     btn.MouseEnter:Connect(function()
         Tween(btn, {BackgroundTransparency = 0.15})
     end)
@@ -646,7 +615,6 @@ local tabs = {
     {name="Ferme",    icon="[F]"},
     {name="Config",   icon="[S]"},
 }
-
 local tabBtns = {}
 local activeTab = nil
 
@@ -662,18 +630,16 @@ local function LoadTab(tabName)
     if activeTab == tabName then return end
     activeTab = tabName
     ClearContent()
-
     for _, b in pairs(tabBtns) do
         if b.Name == tabName then
             Tween(b, {BackgroundColor3 = Config.Colors.Accent})
             b.TextColor3 = Color3.fromRGB(255,255,255)
         else
-            Tween(b, {BackgroundColor3 = Color3.fromRGB(0,0,0,0)})
+            Tween(b, {BackgroundColor3 = Color3.fromRGB(0,0,0)})
             b.BackgroundTransparency = 1
             b.TextColor3 = Config.Colors.TextDim
         end
     end
-
     if tabName == "Accueil" then
         local c1 = MakeCard("BIENVENUE")
         Label(c1, "Hyper Hub v2.0", IsMobile and 15 or 17, Config.Colors.Accent, Enum.Font.GothamBold,
@@ -684,25 +650,21 @@ local function LoadTab(tabName)
         Label(c1, "Joueur : " .. Player.Name,
             IsMobile and 11 or 12, Config.Colors.TextDim, Enum.Font.Gotham,
             nil, UDim2.new(1,0,0,18), Enum.TextXAlignment.Left)
-
         local c2 = MakeCard("RACCOURCI")
         Label(c2, "Touche : RightControl (toggle menu)",
             IsMobile and 11 or 12, Config.Colors.TextDim, Enum.Font.Gotham,
             nil, UDim2.new(1,0,0,18), Enum.TextXAlignment.Left)
-
     elseif tabName == "Combat" then
         local c1 = MakeCard("AIMBOT")
         MakeToggle(c1, "Aimbot", false, function(v) print("Aimbot:", v) end)
         MakeToggle(c1, "Silent Aim", false, function(v) print("SilentAim:", v) end)
         MakeSlider(c1, "Portee Aimbot", 10, 500, 100, function(v) print("Range:", v) end)
         MakeDropdown(c1, "Partie du corps", {"Tete", "Torse", "Aleatoire"}, function(v) print("Part:", v) end)
-
         local c2 = MakeCard("VISIBILITE")
         MakeToggle(c2, "ESP Joueurs", false, function(v) print("ESP:", v) end)
         MakeToggle(c2, "Tracer", false, function(v) print("Tracer:", v) end)
         MakeSlider(c2, "Epaisseur ESP", 1, 5, 2, function(v) print("ESPThick:", v) end)
         MakeDropdown(c2, "Couleur ESP", {"Rouge", "Bleu", "Vert", "Blanc"}, function(v) print("ESPCol:", v) end)
-
     elseif tabName == "Joueur" then
         local c1 = MakeCard("MOUVEMENT")
         MakeToggle(c1, "Infinite Jump", false, function(v)
@@ -727,7 +689,6 @@ local function LoadTab(tabName)
                 if hum then hum.JumpPower = v end
             end
         end)
-
         local c2 = MakeCard("APPARENCE")
         MakeDropdown(c2, "Taille du joueur", {"Normal", "Petit", "Geant"}, function(v)
             if Player.Character then
@@ -743,20 +704,17 @@ local function LoadTab(tabName)
         MakeButton(c2, "Respawn", Config.Colors.Warning, function()
             Player.Character:BreakJoints()
         end)
-
     elseif tabName == "Ferme" then
         local c1 = MakeCard("AUTO FARM")
         MakeToggle(c1, "Auto Farm", false, function(v) print("AutoFarm:", v) end)
         MakeToggle(c1, "Auto Collect", false, function(v) print("AutoCollect:", v) end)
         MakeSlider(c1, "Intervalle (sec)", 1, 30, 5, function(v) print("Interval:", v) end)
         MakeDropdown(c1, "Mode de farm", {"Normal", "Rapide", "Ultra"}, function(v) print("Mode:", v) end)
-
         local c2 = MakeCard("TELEPORT")
         MakeDropdown(c2, "Zone", {"Zone 1","Zone 2","Zone 3","Boss"}, function(v) print("Zone:", v) end)
         MakeButton(c2, "Teleporter", Config.Colors.Accent, function()
             print("Teleport!")
         end)
-
     elseif tabName == "Config" then
         local c1 = MakeCard("INTERFACE")
         MakeDropdown(c1, "Touche toggle", {"RightControl","RightShift","F5","F6"}, function(v)
@@ -764,7 +722,6 @@ local function LoadTab(tabName)
         end)
         MakeToggle(c1, "Notifications", true, function(v) print("Notifs:", v) end)
         MakeToggle(c1, "Sons UI", false, function(v) print("Sounds:", v) end)
-
         local c2 = MakeCard("LICENCE")
         Label(c2, "Type : " .. (LicenseData and (LicenseData.type == "perm" and "Permanente" or "Temporaire") or "?"),
             IsMobile and 12 or 13, Config.Colors.Success, Enum.Font.GothamSemibold,
@@ -780,7 +737,6 @@ local function LoadTab(tabName)
     end
 end
 
--- Creer les boutons sidebar
 for _, tab in ipairs(tabs) do
     local btn = Instance.new("TextButton")
     btn.Name = tab.name
@@ -794,7 +750,6 @@ for _, tab in ipairs(tabs) do
     btn.Parent = SidebarFrame
     Corner(btn, UDim.new(0,8))
     table.insert(tabBtns, btn)
-
     btn.MouseEnter:Connect(function()
         if activeTab ~= tab.name then
             Tween(btn, {BackgroundTransparency = 0.8})
@@ -822,18 +777,72 @@ UIS.InputBegan:Connect(function(inp, gp)
     end
 end)
 
--- ======== VALIDATION CLE ========
+-- ======================================================
+-- ✅ FIX COMPLET : VALIDATION CLE RÉÉCRITE
+-- Problème original : task.spawn + boucle while = result
+-- toujours nil car le thread interne n'avait pas le temps
+-- de se terminer avant le timeout → crash silencieux.
+-- Solution : tout mettre DANS le task.spawn, pas de boucle.
+-- ======================================================
 local isValidating = false
 
-local function ValidateLicense(key)
-    local cleanKey = key:upper():gsub("%s+","")
-    if cleanKey == "" then return false, "Veuillez entrer une cle" end
+local function onLicenseSuccess(data)
+    IsLicensed = true
+    LicenseData = data
+    StatusLbl.Text = "Cle valide !"
+    StatusLbl.TextColor3 = Config.Colors.Success
+    ActivateBtn.Text = "Acces accorde !"
+    ActivateBtn.BackgroundColor3 = Config.Colors.Success
+    BadgeLbl.Text = data.type == "perm" and "PERMANENT" or "TEMPORAIRE"
+    task.wait(0.8)
+    LicFrame.Visible = false
+    MainFrame.Visible = true
+    MainFrame.Size = UDim2.new(0,WIN_W,0,0)
+    Tween(MainFrame, {Size = UDim2.new(0,WIN_W,0,WIN_H)})
+    task.wait(0.2)
+    LoadTab("Accueil")
+end
 
-    local result = nil
-    local done = false
+local function onLicenseFail(reason)
+    StatusLbl.Text = tostring(reason)
+    StatusLbl.TextColor3 = Config.Colors.Error
+    ActivateBtn.Text = "Activer la Licence"
+    ActivateBtn.BackgroundColor3 = Config.Colors.Accent
+    isValidating = false
+end
 
+ActivateBtn.MouseButton1Click:Connect(function()
+    -- ✅ Anti double-clic
+    if isValidating then return end
+
+    local key = InputBox.Text
+    if key == "" then
+        StatusLbl.Text = "Veuillez entrer une cle !"
+        StatusLbl.TextColor3 = Config.Colors.Error
+        return
+    end
+
+    isValidating = true
+    local cleanKey = key:upper():gsub("%s+", "")
+
+    -- ✅ Feedback visuel immédiat (avant toute requête)
+    ActivateBtn.Text = "Verification..."
+    ActivateBtn.BackgroundColor3 = Config.Colors.TextDim
+    StatusLbl.Text = "Connexion au serveur..."
+    StatusLbl.TextColor3 = Config.Colors.Warning
+
+    -- ✅ FIX : Vérification locale en PRIORITÉ (clés dans Config.ValidKeys)
+    for _, validKey in ipairs(Config.ValidKeys) do
+        if cleanKey == validKey:upper() then
+            onLicenseSuccess({valid = true, type = "perm"})
+            return
+        end
+    end
+
+    -- ✅ FIX : Toute la logique async dans un seul task.spawn
+    -- Plus de boucle while bloquante qui empêchait result d'être set
     task.spawn(function()
-        local ok, resp = pcall(function()
+        local success, result = pcall(function()
             return HTTP:RequestAsync({
                 Url = Config.ApiUrl,
                 Method = "POST",
@@ -848,77 +857,31 @@ local function ValidateLicense(key)
                 })
             })
         end)
-        if ok and resp then
-            local ok2, data = pcall(function() return HTTP:JSONDecode(resp.Body) end)
-            if ok2 and data then
-                if data.valid then
-                    result = {success=true, type=data.type or "perm"}
-                else
-                    result = {success=false, reason=data.reason or "Cle invalide"}
-                end
-            else
-                result = {success=false, reason="Erreur lecture reponse"}
-            end
-        else
-            result = {success=false, reason="Serveur inaccessible"}
+
+        if not success then
+            -- Requête échouée (serveur hors ligne, erreur réseau)
+            onLicenseFail("Serveur hors ligne. Reessayez dans 30s.")
+            return
         end
-        done = true
-    end)
 
-    local t = 0
-    while not done and t < 12 do
-        task.wait(0.5)
-        t = t + 0.5
-    end
+        if not result or not result.Body then
+            onLicenseFail("Reponse invalide du serveur.")
+            return
+        end
 
-    if not done then
-        return false, "Timeout - Serveur en demarrage, reessaie dans 30 sec"
-    end
-    if result.success then
-        return true, {valid=true, type=result.type}
-    else
-        return false, result.reason
-    end
-end
+        local ok, data = pcall(function()
+            return HTTP:JSONDecode(result.Body)
+        end)
 
-ActivateBtn.MouseButton1Click:Connect(function()
-    if isValidating then return end
-    local key = InputBox.Text
-    if key == "" then
-        StatusLbl.Text = "Veuillez entrer une cle !"
-        StatusLbl.TextColor3 = Config.Colors.Error
-        return
-    end
-    isValidating = true
-    ActivateBtn.Text = "Validation..."
-    ActivateBtn.BackgroundColor3 = Config.Colors.TextDim
-    StatusLbl.Text = "Connexion au serveur..."
-    StatusLbl.TextColor3 = Config.Colors.Warning
+        if not ok or not data then
+            onLicenseFail("Erreur lecture reponse serveur.")
+            return
+        end
 
-    task.spawn(function()
-        local valid, data = ValidateLicense(key)
-        if valid then
-            IsLicensed = true
-            LicenseData = data
-            StatusLbl.Text = "Cle valide !"
-            StatusLbl.TextColor3 = Config.Colors.Success
-            ActivateBtn.Text = "Acces accorde !"
-            ActivateBtn.BackgroundColor3 = Config.Colors.Success
-            -- Badge update
-            BadgeLbl.Text = data.type == "perm" and "PERMANENT" or "TEMPORAIRE"
-            task.wait(0.8)
-            LicFrame.Visible = false
-            MainFrame.Visible = true
-            MainFrame.Size = UDim2.new(0,WIN_W,0,0)
-            Tween(MainFrame, {Size = UDim2.new(0,WIN_W,0,WIN_H)})
-            task.wait(0.2)
-            LoadTab("Accueil")
+        if data.valid then
+            onLicenseSuccess({valid = true, type = data.type or "perm"})
         else
-            StatusLbl.Text = tostring(data)
-            StatusLbl.TextColor3 = Config.Colors.Error
-            ActivateBtn.Text = "Activer la Licence"
-            ActivateBtn.BackgroundColor3 = Config.Colors.Accent
-            isValidating = false
+            onLicenseFail(data.reason or "Cle invalide ou expiree.")
         end
     end)
 end)
